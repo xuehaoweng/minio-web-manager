@@ -4,20 +4,18 @@
 [![Flask](https://img.shields.io/badge/Flask-2.3.3-green.svg)](https://flask.palletsprojects.com/)
 [![MinIO](https://img.shields.io/badge/MinIO-Object%20Storage-orange.svg)](https://min.io/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/your-username/minio-web-manager.svg)](https://github.com/your-username/minio-web-manager)
-[![GitHub forks](https://img.shields.io/github/forks/your-username/minio-web-manager.svg)](https://github.com/your-username/minio-web-manager)
+[![GitHub stars](https://img.shields.io/github/stars/xuehaoweng/minio-web-manager.svg)](https://github.com/xuehaoweng/minio-web-manager)
+[![GitHub forks](https://img.shields.io/github/forks/xuehaoweng/minio-web-manager.svg)](https://github.com/xuehaoweng/minio-web-manager)
 
 一个基于 Flask 和 MinIO 的现代化文件上传和管理 Web 应用。
-
-![MinIO Web Manager](file-upload.png)
 
 ## 📸 界面预览
 
 ### 文件上传界面
-![文件上传功能](file-upload.png)
+![文件上传功能](./file-upload.png)
 
 ### 文件管理界面  
-![文件管理功能](test.png)
+![文件管理功能](./test.png)
 
 ## 功能特性
 
@@ -52,7 +50,7 @@
 
 ### 1. 克隆项目
 ```bash
-git clone https://github.com/your-username/minio-web-manager.git
+git clone https://github.com/xuehaoweng/minio-web-manager.git
 cd minio-web-manager
 ```
 
@@ -249,4 +247,4 @@ minio-web-manager/
 
 ---
 
-**Made with ❤️ by [Your Name]** 
+**Made with ❤️ by xuehaoweng** 

@@ -120,7 +120,7 @@ python app.py
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
-| `MINIO_ENDPOINT` | MinIO 服务器地址 | `http://10.254.0.249:9000` |
+| `MINIO_ENDPOINT` | MinIO 服务器地址 | `http://ip:9000` |
 | `MINIO_ROOT_USER` | MinIO 用户名 | `admin` |
 | `MINIO_ROOT_PASSWORD` | MinIO 密码 | `12345678` |
 | `MINIO_BUCKET_NAME` | 存储桶名称 | `uploads` |

@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MinIO 文件管理系统</title>
+    <style>
+        /* CSS变量定义 */
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --border-radius: 10px;
+            --box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            animation: slideInUp 0.6s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        #systemStatus {
+            position: relative;
+            z-index: 1;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            background: var(--light-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px dashed #dee2e6;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .upload-section:hover::before {
+            left: 100%;
+        }
+
+        .upload-section:hover {
+            border-color: var(--primary-color);
+            background: #f0f2ff;
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.15);
+        }
+
+        .upload-area {
+            text-align: center;
+            cursor: pointer;
+            padding: 40px;
+            border-radius: 8px;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .upload-area:hover {
+            background: #e8f0fe;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .upload-btn:hover::before {
+            left: 100%;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin-top: 20px;
+            overflow: hidden;
+            display: none;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .files-section {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: var(--transition);
+        }
+
+        .files-section:hover {
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .refresh-btn {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .refresh-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            transition: all 0.3s;
+            transform: translate(-50%, -50%);
+        }
+
+        .refresh-btn:hover::before {
+            width: 100%;
+            height: 100%;
+        }
+
+        .refresh-btn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .files-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .files-table th,
+        .files-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+            transition: var(--transition);
+        }
+
+        .files-table th {
+            background: var(--light-color);
+            font-weight: 600;
+            color: var(--dark-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .files-table tr {
+            transition: var(--transition);
+        }
+
+        .files-table tr:hover {
+            background: #f8f9fa;
+            transform: scale(1.01);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .action-btn {
+            background: var(--info-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-right: 5px;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.3s;
+        }
+
+        .action-btn:hover::before {
+            left: 100%;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,123,255,0.3);
+        }
+
+        .delete-btn {
+            background: var(--danger-color);
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+            box-shadow: 0 3px 8px rgba(220,53,69,0.3);
+        }
+
+        .download-btn {
+            background: var(--success-color);
+        }
+
+        .download-btn:hover {
+            background: #218838;
+            box-shadow: 0 3px 8px rgba(40,167,69,0.3);
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+            animation: slideInDown 0.3s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+        }
+
+        .error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.2);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ddd;
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .file-date {
+            color: #999;
+            font-size: 0.8em;
+        }
+
+        /* 复选框样式 */
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary-color);
+        }
+
+        /* 搜索和排序容器样式 */
+        #searchSortContainer {
+            background: var(--light-color);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+
+        #searchSortContainer input,
+        #searchSortContainer select {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.9em;
+            transition: var(--transition);
+        }
+
+        #searchSortContainer input:focus,
+        #searchSortContainer select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: var(--border-radius);
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .files-table {
+                font-size: 0.9em;
+            }
+            
+            .files-table th,
+            .files-table td {
+                padding: 10px 8px;
+            }
+
+            .section-title {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            #searchSortContainer {
+                padding: 15px;
+            }
+
+            #searchSortContainer > div {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        /* 深色模式支持 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --light-color: #2d3748;
+                --dark-color: #f7fafc;
+            }
+
+            body {
+                background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            }
+
+            .container {
+                background: #2d3748;
+                color: #f7fafc;
+            }
+
+            .files-section {
+                background: #2d3748;
+                color: #f7fafc;
+            }
+
+            .files-table th {
+                background: #4a5568;
+                color: #f7fafc;
+            }
+
+            .files-table tr:hover {
+                background: #4a5568;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📁 MinIO 文件管理系统</h1>
+            <p>安全、高效的文件上传和管理平台</p>
+            <div id="systemStatus" style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">
+                <span id="minioStatus">🔄 检查系统状态...</span>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- 上传区域 -->
+            <div class="upload-section">
+                <h2 class="section-title">📤 文件上传</h2>
+                
+                <!-- Bucket选择 -->
+                <div style="margin-bottom: 20px;">
+                    <label for="bucketSelect" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                        📦 选择存储桶 (Bucket):
+                    </label>
+                    <select id="bucketSelect" style="width: 100%; padding: 10px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1em; background: white;">
+                        <option value="">正在加载...</option>
+                    </select>
+                    <button onclick="createNewBucket()" style="margin-top: 10px; background: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.9em;">
+                        ➕ 创建新Bucket
+                    </button>
+                </div>
+                
+                <!-- 文件名选项 -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                        📝 文件名设置:
+                    </label>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="radio" name="filenameOption" value="original" checked style="margin: 0;">
+                            <span>保留原始文件名</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="radio" name="filenameOption" value="uuid" style="margin: 0;">
+                            <span>添加UUID前缀</span>
+                        </label>
+                    </div>
+                    <p style="color: #666; font-size: 0.8em; margin-top: 5px;">
+                        选择"保留原始文件名"时，如果存在同名文件会自动添加数字后缀
+                    </p>
+                </div>
+                
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📁</div>
+                    <p>点击选择文件或拖拽文件到此处</p>
+                    <p style="color: #666; font-size: 0.9em; margin-top: 10px;">
+                        支持所有类型的文件
+                    </p>
+                </div>
+                <input type="file" id="fileInput" class="file-input" onchange="handleFileSelect(event)">
+                <button class="upload-btn" id="uploadBtn" onclick="uploadFile()" disabled>
+                    上传文件
+                </button>
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <!-- 消息提示 -->
+            <div id="message" class="message"></div>
+
+            <!-- 文件列表 -->
+            <div class="files-section">
+                <div class="section-title">
+                    📋 文件列表
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span id="currentBucket" style="font-size: 0.9em; color: #666;">当前Bucket: 未选择</span>
+                        <button class="refresh-btn" onclick="loadFiles()">
+                            🔄 刷新
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 搜索和排序 -->
+                <div id="searchSortContainer" style="display: none; margin-bottom: 20px;">
+                    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" id="searchInput" placeholder="搜索文件名..." 
+                                   style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9em;">
+                        </div>
+                        <select id="sortSelect" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9em;">
+                            <option value="name">按名称排序</option>
+                            <option value="size">按大小排序</option>
+                            <option value="date">按日期排序</option>
+                        </select>
+                        <button onclick="clearSearch()" style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; font-size: 0.9em; cursor: pointer;">
+                            清除搜索
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="filesContainer">
+                    <div class="loading">请先选择Bucket</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let currentBucket = '';
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBuckets();
+        });
+
+        // 加载bucket列表
+        async function loadBuckets() {
+            try {
+                const response = await fetch('/buckets');
+                const result = await response.json();
+
+                if (response.ok) {
+                    displayBuckets(result.buckets);
+                } else {
+                    showMessage(result.error, 'error');
+                    // 显示错误状态
+                    document.getElementById('filesContainer').innerHTML = `
+                        <div style="text-align: center; padding: 60px 20px; color: #666;">
+                            <div style="font-size: 4em; margin-bottom: 20px; opacity: 0.5;">⚠️</div>
+                            <h3 style="margin-bottom: 10px; color: #dc3545;">连接失败</h3>
+                            <p style="color: #999; font-size: 0.9em;">无法连接到MinIO服务器</p>
+                            <p style="color: #999; font-size: 0.8em; margin-top: 10px;">请检查MinIO服务是否正常运行</p>
+                            <button onclick="loadBuckets()" style="margin-top: 15px; padding: 8px 16px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                重试
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                showMessage('加载bucket列表失败: ' + error.message, 'error');
+                // 显示错误状态
+                document.getElementById('filesContainer').innerHTML = `
+                    <div style="text-align: center; padding: 60px 20px; color: #666;">
+                        <div style="font-size: 4em; margin-bottom: 20px; opacity: 0.5;">❌</div>
+                        <h3 style="margin-bottom: 10px; color: #dc3545;">网络错误</h3>
+                        <p style="color: #999; font-size: 0.9em;">加载bucket列表失败: ${error.message}</p>
+                        <button onclick="loadBuckets()" style="margin-top: 15px; padding: 8px 16px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            重试
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // 显示bucket列表
+        function displayBuckets(buckets) {
+            const select = document.getElementById('bucketSelect');
+            select.innerHTML = '<option value="">请选择Bucket</option>';
+            
+            if (buckets.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '📦 暂无Bucket，请创建新的Bucket';
+                option.disabled = true;
+                select.appendChild(option);
+                
+                // 显示空状态提示
+                document.getElementById('filesContainer').innerHTML = `
+                    <div style="text-align: center; padding: 60px 20px; color: #666;">
+                        <div style="font-size: 4em; margin-bottom: 20px; opacity: 0.5;">🏗️</div>
+                        <h3 style="margin-bottom: 10px; color: #333;">暂无Bucket</h3>
+                        <p style="color: #999; font-size: 0.9em;">系统中还没有创建任何Bucket</p>
+                        <p style="color: #999; font-size: 0.8em; margin-top: 10px;">点击"创建新Bucket"按钮开始使用</p>
+                    </div>
+                `;
+            } else {
+                buckets.forEach(bucket => {
+                    const option = document.createElement('option');
+                    option.value = bucket.name;
+                    option.textContent = `${bucket.name} (创建于: ${formatDate(bucket.creation_date)})`;
+                    select.appendChild(option);
+                });
+            }
+
+            // 移除之前的事件监听器（避免重复绑定）
+            const newSelect = select.cloneNode(true);
+            select.parentNode.replaceChild(newSelect, select);
+            
+            // 添加change事件监听
+            newSelect.addEventListener('change', function() {
+                currentBucket = this.value;
+                document.getElementById('currentBucket').textContent = `当前Bucket: ${currentBucket || '未选择'}`;
+                
+                if (currentBucket) {
+                    loadFiles();
+                } else {
+                    document.getElementById('filesContainer').innerHTML = `
+                        <div style="text-align: center; padding: 60px 20px; color: #666;">
+                            <div style="font-size: 4em; margin-bottom: 20px; opacity: 0.5;">📦</div>
+                            <h3 style="margin-bottom: 10px; color: #333;">请先选择Bucket</h3>
+                            <p style="color: #999; font-size: 0.9em;">请在上方选择一个Bucket来查看文件</p>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        // 创建新bucket
+        async function createNewBucket() {
+            const bucketName = prompt('请输入新Bucket名称:\n\n注意：\n- 只能包含小写字母、数字、连字符和点\n- 不能以连字符或点开头或结尾\n- 长度在3-63个字符之间\n\n例如：my-bucket、test.bucket123');
+            
+            if (bucketName && bucketName.trim()) {
+                const trimmedName = bucketName.trim();
+                
+                // 基本验证
+                if (trimmedName.length < 3 || trimmedName.length > 63) {
+                    showMessage('Bucket名称长度必须在3-63个字符之间', 'error');
+                    return;
+                }
+                
+                if (!/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/.test(trimmedName)) {
+                    showMessage('Bucket名称格式不正确，只能包含小写字母、数字、连字符和点，且不能以连字符或点开头或结尾', 'error');
+                    return;
+                }
+                
+                try {
+                    showMessage('正在创建Bucket...', 'success');
+                    
+                    const response = await fetch('/buckets', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ bucket_name: trimmedName })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        showMessage(result.message, 'success');
+                        // 重新加载bucket列表并选择新创建的bucket
+                        await loadBuckets();
+                        
+                        // 选择新创建的bucket
+                        const select = document.getElementById('bucketSelect');
+                        select.value = trimmedName;
+                        currentBucket = trimmedName;
+                        document.getElementById('currentBucket').textContent = `当前Bucket: ${currentBucket}`;
+                        
+                        // 加载新bucket的文件列表
+                        loadFiles();
+                    } else {
+                        showMessage(result.error, 'error');
+                    }
+                } catch (error) {
+                    showMessage('创建Bucket失败: ' + error.message, 'error');
+                }
+            }
+        }
+
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                document.getElementById('uploadBtn').disabled = false;
+                showMessage(`已选择文件: ${file.name}`, 'success');
+            }
+        }
+
+        // 上传文件
+        async function uploadFile() {
+            if (!selectedFile) {
+                showMessage('请先选择文件', 'error');
+                return;
+            }
+
+            if (!currentBucket) {
+                showMessage('请先选择Bucket', 'error');
+                return;
+            }
+
+            const uploadBtn = document.getElementById('uploadBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '上传中...';
+            progressBar.style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('bucket_name', currentBucket);
+            
+            // 添加文件名选项
+            const filenameOption = document.querySelector('input[name="filenameOption"]:checked').value;
+            formData.append('keep_original_name', filenameOption === 'original' ? 'true' : 'false');
+
+            try {
+                const xhr = new XMLHttpRequest();
+                
+                // 监听上传进度
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        progressFill.style.width = percentComplete + '%';
+                        uploadBtn.textContent = `上传中... ${Math.round(percentComplete)}%`;
+                    }
+                });
+
+                // 监听上传完成
+                xhr.addEventListener('load', function() {
+                    if (xhr.status === 200) {
+                        const result = JSON.parse(xhr.responseText);
+                        showMessage(`文件上传成功到Bucket: ${result.bucket}`, 'success');
+                        selectedFile = null;
+                        document.getElementById('fileInput').value = '';
+                        loadFiles(); // 刷新文件列表
+                    } else {
+                        const result = JSON.parse(xhr.responseText);
+                        showMessage(result.error, 'error');
+                    }
+                });
+
+                // 监听上传错误
+                xhr.addEventListener('error', function() {
+                    showMessage('上传失败: 网络错误', 'error');
+                });
+
+                xhr.open('POST', '/upload');
+                xhr.send(formData);
+
+            } catch (error) {
+                showMessage('上传失败: ' + error.message, 'error');
+            } finally {
+                setTimeout(() => {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '上传文件';
+                    progressBar.style.display = 'none';
+                    progressFill.style.width = '0%';
+                }, 1000);
+            }
+        }
+
+        // 加载文件列表
+        async function loadFiles() {
+            if (!currentBucket) {
+                document.getElementById('filesContainer').innerHTML = `
+                    <div style="text-align: center; padding: 60px 20px; color: #666;">
+                        <div style="font-size: 4em; margin-bottom: 20px; opacity: 0.5;">📦</div>
+                        <h3 style="margin-bottom: 10px; color: #333;">请先选择Bucket</h3>
+                        <p style="color: #999; font-size: 0.9em;">请在上方选择一个Bucket来查看文件</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const container = document.getElementById('filesContainer');
+            container.innerHTML = `
+                <div style="text-align: center; padding: 40px 20px; color: #666;">
+                    <div class="loading-spinner" style="display: inline-block; width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px;"></div>
+                    <p style="color: #666; font-size: 1em;">正在加载文件列表...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/files?bucket_name=${encodeURIComponent(currentBucket)}`);
+                const result = await response.json();
+
+                if (response.ok) {
+                    displayFiles(result.files);
+                } else {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 60px 20px; color: #666;">
+                            <div style="font-size: 4em; margin-bottom: 20px; opacity: 0.5;">⚠️</div>
+                            <h3 style="margin-bottom: 10px; color: #dc3545;">加载失败</h3>
+                            <p style="color: #999; font-size: 0.9em;">${result.error}</p>
+                            <button onclick="loadFiles()" style="margin-top: 15px; padding: 8px 16px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                重试
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 60px 20px; color: #666;">
+                        <div style="font-size: 4em; margin-bottom: 20px; opacity: 0.5;">❌</div>
+                        <h3 style="margin-bottom: 10px; color: #dc3545;">网络错误</h3>
+                        <p style="color: #999; font-size: 0.9em;">加载失败: ${error.message}</p>
+                        <button onclick="loadFiles()" style="margin-top: 15px; padding: 8px 16px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            重试
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // 显示文件列表
+        function displayFiles(files) {
+            const container = document.getElementById('filesContainer');
+            const searchContainer = document.getElementById('searchSortContainer');
+            
+            if (files.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 60px 20px; color: #666;">
+                        <div style="font-size: 4em; margin-bottom: 20px; opacity: 0.5;">📁</div>
+                        <h3 style="margin-bottom: 10px; color: #333;">暂无文件</h3>
+                        <p style="color: #999; font-size: 0.9em;">当前Bucket中还没有上传任何文件</p>
+                        <p style="color: #999; font-size: 0.8em; margin-top: 10px;">点击上方上传区域开始上传文件</p>
+                    </div>
+                `;
+                searchContainer.style.display = 'none';
+                return;
+            }
+
+            // 显示搜索和排序控件
+            searchContainer.style.display = 'block';
+            
+            // 存储文件数据用于搜索和排序
+            window.currentFiles = files;
+
+            const table = `
+                <table class="files-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
+                            <th>文件名</th>
+                            <th>原始文件名</th>
+                            <th>大小</th>
+                            <th>上传时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${files.map((file, index) => {
+                            // 尝试提取原始文件名（去掉UUID前缀）
+                            let originalName = file.name;
+                            let displayName = file.name;
+                            
+                            // 如果文件名包含UUID前缀，尝试提取原始文件名
+                            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_/;
+                            if (uuidPattern.test(file.name)) {
+                                originalName = file.name.replace(uuidPattern, '');
+                                displayName = `${originalName} (UUID前缀)`;
+                            }
+                            
+                            return `
+                                <tr>
+                                    <td><input type="checkbox" class="file-checkbox" value="${file.name}"></td>
+                                    <td title="${file.name}">${displayName}</td>
+                                    <td class="file-size">${originalName}</td>
+                                    <td class="file-size">${formatFileSize(file.size)}</td>
+                                    <td class="file-date">${formatDate(file.last_modified)}</td>
+                                    <td>
+                                        <button class="action-btn download-btn" onclick="downloadFile('${file.name}')">
+                                            下载
+                                        </button>
+                                        <button class="action-btn delete-btn" onclick="deleteFile('${file.name}')">
+                                            删除
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+                <div style="margin-top: 15px;">
+                    <button onclick="downloadSelected()" class="action-btn download-btn" style="margin-right: 10px;">
+                        下载选中文件
+                    </button>
+                    <button onclick="deleteSelected()" class="action-btn delete-btn">
+                        删除选中文件
+                    </button>
+                </div>
+            `;
+            
+            container.innerHTML = table;
+            
+            // 添加搜索和排序事件监听
+            document.getElementById('searchInput').addEventListener('input', filterFiles);
+            document.getElementById('sortSelect').addEventListener('change', sortFiles);
+        }
+
+        // 下载文件
+        function downloadFile(objectName) {
+            window.open(`/download/${encodeURIComponent(objectName)}?bucket_name=${encodeURIComponent(currentBucket)}`, '_blank');
+        }
+
+        // 删除文件
+        async function deleteFile(objectName) {
+            if (!confirm('确定要删除这个文件吗？')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/delete/${encodeURIComponent(objectName)}?bucket_name=${encodeURIComponent(currentBucket)}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(result.message, 'success');
+                    loadFiles(); // 刷新文件列表
+                } else {
+                    showMessage(result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        // 显示消息
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            if (!dateString) return '未知';
+            const date = new Date(dateString);
+            return date.toLocaleString('zh-CN');
+        }
+
+        // 搜索文件
+        function filterFiles() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('.files-table tbody tr');
+            
+            rows.forEach(row => {
+                const fileName = row.cells[1].textContent.toLowerCase();
+                const originalName = row.cells[2].textContent.toLowerCase();
+                
+                if (fileName.includes(searchTerm) || originalName.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // 排序文件
+        function sortFiles() {
+            const sortBy = document.getElementById('sortSelect').value;
+            const tbody = document.querySelector('.files-table tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            rows.sort((a, b) => {
+                let aValue, bValue;
+                
+                switch(sortBy) {
+                    case 'name':
+                        aValue = a.cells[1].textContent.toLowerCase();
+                        bValue = b.cells[1].textContent.toLowerCase();
+                        break;
+                    case 'size':
+                        aValue = parseFileSize(a.cells[3].textContent);
+                        bValue = parseFileSize(b.cells[3].textContent);
+                        break;
+                    case 'date':
+                        aValue = new Date(a.cells[4].textContent);
+                        bValue = new Date(b.cells[4].textContent);
+                        break;
+                    default:
+                        return 0;
+                }
+                
+                if (aValue < bValue) return -1;
+                if (aValue > bValue) return 1;
+                return 0;
+            });
+            
+            // 重新插入排序后的行
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // 解析文件大小用于排序
+        function parseFileSize(sizeStr) {
+            const match = sizeStr.match(/^([\d.]+)\s*([KMGT]?B)$/);
+            if (!match) return 0;
+            
+            const value = parseFloat(match[1]);
+            const unit = match[2];
+            const multipliers = { 'B': 1, 'KB': 1024, 'MB': 1024*1024, 'GB': 1024*1024*1024 };
+            
+            return value * (multipliers[unit] || 1);
+        }
+
+        // 清除搜索
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('sortSelect').value = 'name';
+            
+            const rows = document.querySelectorAll('.files-table tbody tr');
+            rows.forEach(row => row.style.display = '');
+        }
+
+        // 全选/取消全选
+        function toggleSelectAll(checkbox) {
+            const fileCheckboxes = document.querySelectorAll('.file-checkbox');
+            fileCheckboxes.forEach(cb => cb.checked = checkbox.checked);
+        }
+
+        // 下载选中文件
+        function downloadSelected() {
+            const selectedFiles = document.querySelectorAll('.file-checkbox:checked');
+            if (selectedFiles.length === 0) {
+                showMessage('请先选择要下载的文件', 'error');
+                return;
+            }
+            
+            selectedFiles.forEach(checkbox => {
+                downloadFile(checkbox.value);
+            });
+        }
+
+        // 删除选中文件
+        async function deleteSelected() {
+            const selectedFiles = document.querySelectorAll('.file-checkbox:checked');
+            if (selectedFiles.length === 0) {
+                showMessage('请先选择要删除的文件', 'error');
+                return;
+            }
+            
+            if (!confirm(`确定要删除选中的 ${selectedFiles.length} 个文件吗？`)) {
+                return;
+            }
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (const checkbox of selectedFiles) {
+                try {
+                    const response = await fetch(`/delete/${encodeURIComponent(checkbox.value)}?bucket_name=${encodeURIComponent(currentBucket)}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+            
+            if (successCount > 0) {
+                showMessage(`成功删除 ${successCount} 个文件${errorCount > 0 ? `，${errorCount} 个文件删除失败` : ''}`, 'success');
+                loadFiles();
+            } else {
+                showMessage('删除失败', 'error');
+            }
+        }
+
+        // 检查系统状态
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch('/status');
+                const status = await response.json();
+                
+                const statusElement = document.getElementById('minioStatus');
+                if (status.minio_status === 'connected') {
+                    statusElement.innerHTML = '🟢 MinIO连接正常';
+                } else if (status.minio_status === 'disconnected') {
+                    statusElement.innerHTML = '🔴 MinIO连接失败';
+                } else {
+                    statusElement.innerHTML = '🟡 MinIO连接异常';
+                }
+            } catch (error) {
+                document.getElementById('minioStatus').innerHTML = '🔴 系统状态检查失败';
+            }
+        }
+
+        // 页面加载时获取文件列表
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBuckets();
+            checkSystemStatus();
+            
+            // 初始化文件列表显示
+            document.getElementById('filesContainer').innerHTML = `
+                <div style="text-align: center; padding: 60px 20px; color: #666;">
+                    <div style="font-size: 4em; margin-bottom: 20px; opacity: 0.5;">📦</div>
+                    <h3 style="margin-bottom: 10px; color: #333;">请先选择Bucket</h3>
+                    <p style="color: #999; font-size: 0.9em;">请在上方选择一个Bucket来查看文件</p>
+                </div>
+            `;
+            
+            // 每30秒检查一次系统状态
+            setInterval(checkSystemStatus, 30000);
+        });
+
+        // 拖拽上传功能
+        const uploadArea = document.querySelector('.upload-area');
+        
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.style.background = '#e8f0fe';
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.style.background = '';
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.style.background = '';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('fileInput').files = files;
+                handleFileSelect({ target: { files: files } });
+            }
+        });
+    </script>
+</body>
+</html> 

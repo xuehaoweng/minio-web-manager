@@ -78,7 +78,7 @@ pip install -r requirements.txt
 
 ```env
 # MinIO 配置
-MINIO_ENDPOINT=http://10.254.0.249:9000
+MINIO_ENDPOINT=http://ip:9000
 MINIO_ROOT_USER=admin
 MINIO_ROOT_PASSWORD=12345678
 MINIO_BUCKET_NAME=uploads

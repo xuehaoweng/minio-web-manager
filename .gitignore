@@ -362,7 +362,6 @@ docker-compose.yaml
 *.ogg
 *.jpg
 *.jpeg
-*.png
 *.gif
 *.bmp
 *.tiff

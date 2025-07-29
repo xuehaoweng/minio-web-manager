@@ -44,7 +44,44 @@
 
 - Python 3.7+
 - MinIO 服务器
-- 现代浏览器
+- 现代浏览器 (Chrome, Firefox, Safari, Edge)
+
+## 🛠️ 技术栈
+
+### 后端
+- **Flask 2.3.3**: Python Web框架
+- **MinIO 7.2.0**: 对象存储客户端
+- **python-dotenv 1.0.0**: 环境变量管理
+- **flask-cors 4.0.0**: 跨域资源共享
+
+### 前端
+- **HTML5**: 页面结构
+- **CSS3**: 样式设计（包含动画和响应式布局）
+- **JavaScript**: 交互逻辑和API调用
+- **XMLHttpRequest**: 文件上传进度显示
+
+### 特性
+- **单页面应用**: 所有功能集成在一个HTML文件中
+- **响应式设计**: 支持桌面和移动设备
+- **深色模式**: 自动适配系统主题
+- **实时进度**: 文件上传进度实时显示
+
+## 📁 项目结构
+
+```
+minio-web-manager/
+├── app.py                 # Flask 主应用文件
+├── config.env             # 环境变量配置文件
+├── requirements.txt       # Python 依赖包列表
+├── templates/
+│   └── index.html        # 前端页面模板
+├── file-upload.png       # 项目截图 - 文件上传界面
+├── test.png             # 项目截图 - 文件管理界面
+├── test_bucket.py       # Bucket 测试脚本
+├── .gitignore           # Git 忽略文件配置
+├── LICENSE              # MIT 开源协议
+└── README.md           # 项目说明文档
+```
 
 ## 🚀 快速开始
 
@@ -78,12 +115,25 @@ pip install -r requirements.txt
 
 ```env
 # MinIO 配置
-MINIO_ENDPOINT=http://ip:9000
+MINIO_ENDPOINT=http://your-minio-server:9000
 MINIO_ROOT_USER=admin
 MINIO_ROOT_PASSWORD=12345678
 MINIO_BUCKET_NAME=uploads
 MINIO_SECURE=false
+
+# 文件上传配置
+MAX_FILE_SIZE=104857600  # 100MB
+ALLOWED_EXTENSIONS=jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar,mp4,mp3
 ```
+
+**配置说明：**
+- `MINIO_ENDPOINT`: 您的 MinIO 服务器地址
+- `MINIO_ROOT_USER`: MinIO 管理员用户名
+- `MINIO_ROOT_PASSWORD`: MinIO 管理员密码
+- `MINIO_BUCKET_NAME`: 默认存储桶名称
+- `MINIO_SECURE`: 是否使用 HTTPS (true/false)
+- `MAX_FILE_SIZE`: 最大文件上传大小 (字节)
+- `ALLOWED_EXTENSIONS`: 允许上传的文件类型
 
 ### 6. 启动应用
 ```bash
@@ -120,7 +170,7 @@ python app.py
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
-| `MINIO_ENDPOINT` | MinIO 服务器地址 | `http://ip:9000` |
+| `MINIO_ENDPOINT` | MinIO 服务器地址 | `http://your-minio-server:9000` |
 | `MINIO_ROOT_USER` | MinIO 用户名 | `admin` |
 | `MINIO_ROOT_PASSWORD` | MinIO 密码 | `12345678` |
 | `MINIO_BUCKET_NAME` | 存储桶名称 | `uploads` |
@@ -154,23 +204,73 @@ python app.py
 - **URL**: `DELETE /delete/<object_name>`
 - **返回**: JSON 格式的删除结果
 
-## 使用说明
+## 📖 使用说明
+
+### 基本操作
 
 1. **上传文件**:
    - 点击上传区域选择文件
    - 或直接拖拽文件到上传区域
+   - 选择文件名设置（保留原始文件名或添加UUID前缀）
    - 点击"上传文件"按钮
 
-2. **查看文件**:
-   - 页面会自动加载文件列表
-   - 点击"刷新"按钮手动更新列表
+2. **Bucket管理**:
+   - 从下拉菜单选择现有Bucket
+   - 点击"创建新Bucket"创建新的存储桶
+   - 输入符合S3命名规范的Bucket名称
 
-3. **下载文件**:
-   - 在文件列表中点击"下载"按钮
+3. **文件管理**:
+   - 查看文件列表（支持搜索和排序）
+   - 点击"下载"按钮下载文件
+   - 点击"删除"按钮删除文件
+   - 使用批量操作功能
 
-4. **删除文件**:
-   - 在文件列表中点击"删除"按钮
-   - 确认删除操作
+4. **高级功能**:
+   - 文件搜索：输入关键词搜索文件
+   - 文件排序：按名称、大小、日期排序
+   - 批量操作：全选、批量下载、批量删除
+   - 系统状态：实时显示MinIO连接状态
+
+## 🔌 API 接口
+
+### 文件操作
+
+#### 上传文件
+- **URL**: `POST /upload`
+- **参数**: 
+  - `file`: 文件对象
+  - `bucket_name`: 存储桶名称
+  - `keep_original_name`: 是否保留原始文件名
+- **返回**: JSON 格式的上传结果
+
+#### 获取文件列表
+- **URL**: `GET /files?bucket_name=<bucket_name>`
+- **返回**: JSON 格式的文件列表
+
+#### 下载文件
+- **URL**: `GET /download/<object_name>?bucket_name=<bucket_name>`
+- **返回**: 文件内容
+
+#### 删除文件
+- **URL**: `DELETE /delete/<object_name>?bucket_name=<bucket_name>`
+- **返回**: JSON 格式的删除结果
+
+### Bucket操作
+
+#### 获取Bucket列表
+- **URL**: `GET /buckets`
+- **返回**: JSON 格式的Bucket列表
+
+#### 创建Bucket
+- **URL**: `POST /buckets`
+- **参数**: `{"bucket_name": "新bucket名称"}`
+- **返回**: JSON 格式的创建结果
+
+### 系统状态
+
+#### 检查系统状态
+- **URL**: `GET /status`
+- **返回**: JSON 格式的系统状态信息
 
 ## 📁 项目结构
 
@@ -185,6 +285,18 @@ minio-web-manager/
 ├── README.md          # 项目说明
 └── .gitignore         # Git 忽略文件
 ```
+
+## ⚙️ 环境变量配置
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `MINIO_ENDPOINT` | MinIO 服务器地址 | `http://your-minio-server:9000` |
+| `MINIO_ROOT_USER` | MinIO 用户名 | `admin` |
+| `MINIO_ROOT_PASSWORD` | MinIO 密码 | `12345678` |
+| `MINIO_BUCKET_NAME` | 默认存储桶名称 | `uploads` |
+| `MINIO_SECURE` | 是否使用 HTTPS | `false` |
+| `MAX_FILE_SIZE` | 最大文件上传大小 | `104857600` (100MB) |
+| `ALLOWED_EXTENSIONS` | 允许上传的文件类型 | `jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar,mp4,mp3` |
 
 ## 故障排除
 
@@ -205,6 +317,31 @@ minio-web-manager/
    - 检查端口是否被占用
    - 验证防火墙设置
 
+## 🧪 测试
+
+### 测试Bucket操作
+项目包含一个测试脚本 `test_bucket.py`，可以用来测试Bucket的创建和列表功能：
+
+```bash
+python test_bucket.py
+```
+
+### 手动测试API
+可以使用curl或Postman测试API接口：
+
+```bash
+# 测试系统状态
+curl http://localhost:5000/status
+
+# 获取Bucket列表
+curl http://localhost:5000/buckets
+
+# 创建新Bucket
+curl -X POST http://localhost:5000/buckets \
+  -H "Content-Type: application/json" \
+  -d '{"bucket_name": "test-bucket"}'
+```
+
 ## 开发说明
 
 ### 添加新功能
@@ -216,6 +353,13 @@ minio-web-manager/
 ### 自定义样式
 
 编辑 `templates/index.html` 中的 `<style>` 部分来修改界面样式。
+
+### 文件结构说明
+
+- `app.py`: Flask应用主文件，包含所有API路由
+- `templates/index.html`: 单页面应用，包含所有前端逻辑
+- `config.env`: 环境变量配置文件
+- `test_bucket.py`: Bucket操作测试脚本
 
 ## 🤝 贡献指南
 

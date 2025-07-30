@@ -1,0 +1,34 @@
+[Unit]
+Description=MinIO Web Manager
+Documentation=https://github.com/xuehaoweng/minio-web-manager
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/minio-web-manager
+Environment=PATH=/opt/minio-web-manager/venv/bin
+Environment=FLASK_ENV=production
+ExecStart=/opt/minio-web-manager/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 300 --access-logfile /var/log/minio-web-manager/access.log --error-logfile /var/log/minio-web-manager/error.log app:app
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=minio-web-manager
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/minio-web-manager /var/log/minio-web-manager
+
+# 资源限制
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target 

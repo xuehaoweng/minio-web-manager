@@ -21,12 +21,6 @@ services:
       - ./logs:/app/logs
     networks:
       - minio-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:15000/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # MinIO 对象存储服务
   minio:

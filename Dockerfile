@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM docker-mirror.aigc2d.com/python:3.9-slim
 
 # 设置工作目录
 WORKDIR /app
@@ -24,9 +24,7 @@ USER appuser
 # 暴露端口
 EXPOSE 15000
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:15000/status || exit 1
+
 
 # 启动应用
 CMD ["gunicorn", "--bind", "0.0.0.0:15000", "--workers", "4", "--timeout", "300", "app:app"] 

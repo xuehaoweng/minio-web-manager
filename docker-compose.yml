@@ -24,7 +24,7 @@ services:
 
   # MinIO 对象存储服务
   minio:
-    image: minio/minio:latest
+    image: docker-mirror.aigc2d.com/minio/minio:latest
     container_name: minio-server
     restart: unless-stopped
     ports:
@@ -46,7 +46,7 @@ services:
 
   # Nginx 反向代理
   nginx:
-    image: nginx:alpine
+    image: docker-mirror.aigc2d.com/nginx:alpine
     container_name: minio-nginx
     restart: unless-stopped
     ports:
